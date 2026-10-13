@@ -54,26 +54,32 @@ async function likePost(req, res) {
         })
 
         // Create notification
-        await notificationService.createNotification({
-            recipient: post.user,
-            sender: req.user._id,
-            type: "like",
-            post: post._id
-        });
+        try {
+            await notificationService.createNotification({
+                recipient: post.user,
+                sender: req.user._id,
+                type: "like",
+                post: post._id
+            });
+        } catch (notifErr) {
+            console.warn("Notification error on like:", notifErr.message);
+        }
 
-        // Update a Like Count in PostModel
+        // Update a Like Count in PostModel based on actual count
+        const totalLikes = await likeModel.countDocuments({ post: postId });
         await postModel.findByIdAndUpdate(
             postId,
             {
-                $inc: {
-                    likesCount: 1
-                }
+                likesCount: totalLikes
             }
         );
 
         res.status(200).json({
             message: "Like created successfully",
-            like
+            like,
+            likesCount: totalLikes,
+            totalLikes,
+            isLiked: true
         });
 
 
@@ -147,19 +153,21 @@ async function unlikePost(req, res) {
             post: postId
         });
 
-        // Update a Like Count in PostModel
+        // Update a Like Count in PostModel based on actual count
+        const totalLikes = await likeModel.countDocuments({ post: postId });
         await postModel.findByIdAndUpdate(
             postId,
             {
-                $inc: {
-                    likesCount: -1
-                }
+                likesCount: totalLikes
             }
         );
 
         res.status(200).json({
             message: "Dis Like successfully",
-            like
+            like,
+            likesCount: totalLikes,
+            totalLikes,
+            isLiked: false
         });
 
 
@@ -263,16 +271,24 @@ async function userIsLiked(req, res) {
             post: postId
         });
 
+        // Always calculate actual like count to keep it accurate and self-healing
+        const totalLikes = await likeModel.countDocuments({ post: postId });
+        if (post.likesCount !== totalLikes) {
+            await postModel.findByIdAndUpdate(postId, { likesCount: totalLikes });
+        }
+
         res.status(200).json({
             message: "Like status fetched successfully",
-            isLiked: !!isLiked
+            isLiked: !!isLiked,
+            totalLikes,
+            likesCount: totalLikes
         });
 
 
     } catch (error) {
 
         console.error(error);
-        
+
         res.status(500).json({
             message: "Internal server error",
             error: error.message

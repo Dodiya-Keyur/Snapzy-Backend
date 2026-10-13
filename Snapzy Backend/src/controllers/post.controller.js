@@ -281,7 +281,11 @@ async function deletePost(req, res) {
 
         // Delete image from ImageKit
         if (post.imageFileId) {
-            await imagekit.files.delete(post.imageFileId);
+            try {
+                await imagekit.files.delete(post.imageFileId);
+            } catch (imgError) {
+                console.warn(`Failed to delete ImageKit file ${post.imageFileId}:`, imgError.message);
+            }
         }
 
         // Delete all likes of Post
@@ -289,14 +293,12 @@ async function deletePost(req, res) {
             post: postId
         });
 
+        // Delete all comments of Post
         await commentModel.deleteMany({
-            $or: [
-                { _id: commentid },
-                { parentComment: commentid }
-            ]
+            post: postId
         });
 
-        // Delet Post
+        // Delete Post
         await postModel.findOneAndDelete(
             { _id: postId }
         );
