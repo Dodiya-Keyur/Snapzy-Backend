@@ -507,7 +507,13 @@ async function getSavedPost(req, res) {
         const user = await userModel
             .findById(userId)
             .select("savedPosts")
-            .populate("savedPosts");
+            .populate({
+                path: "savedPosts",
+                populate: {
+                    path: "user",
+                    select: "username profilePicture"
+                }
+            });
 
         if (!user) {
             return res.status(404).json({
