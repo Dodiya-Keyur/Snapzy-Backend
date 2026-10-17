@@ -18,27 +18,37 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Allowed origins for Cross-Origin Resource Sharing (CORS)
-const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.trim() : null;
+const frontendUrl = process.env.FRONTEND_URL?.trim();
 
 const allowedOrigins = [
-	frontendUrl,
+	"http://localhost:5173",
 	"https://snapzy-green.vercel.app",
-].filter(Boolean);
+	frontendUrl,
+]
+	.filter(Boolean)
+	.map((url) => url.replace(/\/$/, ""));
 
 // Configure CORS middleware with credential support
-app.use(cors({
-	origin: (origin, callback) => {
-		if (!origin) return callback(null, true);
-		const normalizedOrigin = origin.replace(/\/$/, "");
-		const isAllowed = allowedOrigins.some((allowed) => allowed.replace(/\/$/, "") === normalizedOrigin);
-		if (isAllowed) {
-			callback(null, true);
-		} else {
-			callback(new Error(`Not allowed by CORS: ${origin}`));
-		}
-	},
-	credentials: true,
-}));
+app.use(
+	cors({
+		origin: (origin, callback) => {
+			if (!origin) {
+				return callback(null, true);
+			}
+
+			const normalizedOrigin = origin.replace(/\/$/, "");
+
+			if (allowedOrigins.includes(normalizedOrigin)) {
+				return callback(null, true);
+			}
+
+			return callback(
+				new Error(`Not allowed by CORS: ${origin}`)
+			);
+		},
+		credentials: true,
+	})
+);
 
 // Parse cookies from incoming requests
 app.use(cookieParser());

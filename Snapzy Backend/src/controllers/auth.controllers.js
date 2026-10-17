@@ -45,6 +45,7 @@ async function registerUser(req, res) {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            path: "/",
         });
 
         // Return created user profile details in response
@@ -130,6 +131,7 @@ async function loginUser(req, res) {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            path: "/",
         });
 
         // Return authenticated user profile details in response
