@@ -3,13 +3,12 @@ const mongoose = require("mongoose");
 const postModel = require("../models/post.model");
 const userModel = require("../models/user.model");
 
-
 async function search(req, res) {
-
     try {
-
+        // Get search query from URL parameters
         const { q } = req.query;
 
+        // Validate search query is provided
         if (!q || q.trim() === "") {
             return res.status(400).json({
                 success: false,
@@ -17,8 +16,10 @@ async function search(req, res) {
             });
         }
 
+        // Clean and normalize search query string
         const searchQuery = q.trim();
 
+        // Search users matching username case-insensitively
         const users = await userModel
             .find({
                 username: {
@@ -26,9 +27,10 @@ async function search(req, res) {
                     $options: "i"
                 }
             })
-            .select("username profilePicture bio")
+            .select("_id username name profilePicture bio")
             .limit(20);
 
+        // Search posts matching caption or hashtags case-insensitively
         const posts = await postModel
             .find({
                 $or: [
@@ -46,9 +48,10 @@ async function search(req, res) {
                     }
                 ]
             })
-            .populate("user", "username profilePicture")
+            .populate("user", "_id username name profilePicture")
             .limit(20);
 
+        // Return found users and posts
         return res.status(200).json({
             success: true,
             data: {
@@ -58,16 +61,14 @@ async function search(req, res) {
         });
 
     } catch (error) {
-
         console.error(error);
 
+        // Return internal server error response
         return res.status(500).json({
             success: false,
             message: "Internal server error"
         });
-
     }
 }
 
-
-module.exports = { search }
+module.exports = { search };

@@ -1,32 +1,29 @@
 const express = require("express");
 
-// MiddleWare
+// Middleware
 const userAuth = require("../middleware/auth.middleware");
 const upload = require("../middleware/upload.middleware");
 
 // Controllers
-const postControllers = require("../controllers/post.controller")
-
+const postControllers = require("../controllers/post.controller");
 
 const postrouter = express.Router();
 
-
-// Create Post
+// Post creation endpoint with single image upload
 postrouter.post("/create-post", userAuth, upload.single("image"), postControllers.createPost);
 
-// Get Post
+// Post feed and single post retrieval endpoints
 postrouter.get("/feed", userAuth, postControllers.getAllPost);
 postrouter.get("/getpost/:postid", userAuth, postControllers.getPost);
 
-// Update Post
+// Post metadata update endpoint
 postrouter.patch("/update-post/:postid", userAuth, postControllers.updatePost);
 
-// Delete Post
+// Post deletion endpoint
 postrouter.delete("/delete-post/:postid", userAuth, postControllers.deletePost);
 
-// Post Add to Saved Post
+// Save and bookmark post endpoints
 postrouter.post("/:postid/save", userAuth, postControllers.addSavedPost);
-// Post remove from Saved Post
 postrouter.delete("/:postid/save", userAuth, postControllers.removeSavedPost);
 
 module.exports = postrouter;

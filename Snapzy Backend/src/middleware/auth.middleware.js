@@ -1,26 +1,26 @@
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 
+// Verify authentication token from cookies and attach user to request
 const authMiddleware = async (req, res, next) => {
     try {
-        // 1. Get token from cookies
+        // Extract authentication token from cookies
         const token = req.cookies.token;
 
-        // 2. Check token exists
+        // Return 401 if authentication token is missing
         if (!token) {
-
             return res.status(401).json({
                 message: "You are not logged in"
             });
         }
 
-        // 3. Verify token
+        // Verify and decode JWT token using secret key
         const decoded = jwt.verify(
             token,
             process.env.JWT_SECRET
         );
 
-        // 4. Find user
+        // Query database to find user by decoded token ID
         const user = await userModel.findById(decoded.id);
 
         if (!user) {
@@ -29,14 +29,13 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // 5. Store user in request
+        // Attach authenticated user document to request object
         req.user = user;
 
-        // 6. Continue to next middleware/controller
+        // Proceed to next middleware or route controller
         next();
 
     } catch (error) {
-
         console.error(error);
 
         return res.status(401).json({

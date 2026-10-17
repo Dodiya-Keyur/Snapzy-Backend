@@ -4,38 +4,40 @@ const likeModel = require("../models/like.model");
 const postModel = require("../models/post.model");
 const userModel = require("../models/user.model");
 
-const notificationService = require("../services/notification.service")
+const notificationService = require("../services/notification.service");
 
+// Add a like to a post
 async function likePost(req, res) {
-
     try {
-
+        // Extract post ID from request parameters
         const postId = req.params.postid;
 
+        // Validate post ID format
         if (!mongoose.isValidObjectId(postId)) {
             return res.status(400).json({
                 message: "Invalid post ID"
             });
         }
 
+        // Get authenticated user ID from request
         const userId = req.user._id;
 
+        // Validate user ID format
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({
                 message: "Invalid User ID"
             });
         }
 
-        // Check if post exists
+        // Check if target post exists in database
         const post = await postModel.findById(postId);
-
         if (!post) {
             return res.status(404).json({
                 message: "Post not found"
             });
         }
 
-        // Check if user already liked the post
+        // Check if user has already liked this post
         const existingLike = await likeModel.findOne({
             user: userId,
             post: postId
@@ -47,13 +49,16 @@ async function likePost(req, res) {
             });
         }
 
-        // Create a Like 
+        // Create new like record in database
         const like = await likeModel.create({
             user: userId,
             post: postId
-        })
+        });
 
-        // Create notification
+        // Populate user details for the created like
+        await like.populate("user", "_id username name profilePicture");
+
+        // Send like notification to post author
         try {
             await notificationService.createNotification({
                 recipient: post.user,
@@ -65,16 +70,14 @@ async function likePost(req, res) {
             console.warn("Notification error on like:", notifErr.message);
         }
 
-        // Update a Like Count in PostModel based on actual count
+        // Calculate updated like count and synchronize post document
         const totalLikes = await likeModel.countDocuments({ post: postId });
-        await postModel.findByIdAndUpdate(
-            postId,
-            {
-                likesCount: totalLikes
-            }
-        );
+        await postModel.findByIdAndUpdate(postId, {
+            likesCount: totalLikes
+        });
 
-        res.status(200).json({
+        // Return success response with like details and updated count
+        return res.status(200).json({
             message: "Like created successfully",
             like,
             likesCount: totalLikes,
@@ -82,12 +85,10 @@ async function likePost(req, res) {
             isLiked: true
         });
 
-
     } catch (error) {
-
         console.error(error);
 
-        // Duplicate key error
+        // Handle duplicate key error if concurrent requests occur
         if (error.code === 11000) {
             return res.status(400).json({
                 message: "Post already liked"
@@ -99,43 +100,40 @@ async function likePost(req, res) {
             error: error.message
         });
     }
-
 }
 
+// Remove a like from a post
 async function unlikePost(req, res) {
-
     try {
-
-        // Get Post ID
+        // Extract post ID from request parameters
         const postId = req.params.postid;
 
-        // Validate Post ID
+        // Validate post ID format
         if (!mongoose.isValidObjectId(postId)) {
             return res.status(400).json({
                 message: "Invalid post ID"
             });
         }
 
-        // Get User ID
+        // Get authenticated user ID from request
         const userId = req.user._id;
 
-        // Validate User ID
+        // Validate user ID format
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({
                 message: "Invalid User ID"
             });
         }
 
-        // Check if post exists
+        // Check if target post exists in database
         const post = await postModel.findById(postId);
-
         if (!post) {
             return res.status(404).json({
                 message: "Post not found"
             });
         }
 
-        // Check if user liked the post
+        // Check if user currently likes the post
         const existingLike = await likeModel.findOne({
             user: userId,
             post: postId
@@ -147,22 +145,20 @@ async function unlikePost(req, res) {
             });
         }
 
-        // Delete Like
+        // Delete like record from database
         const like = await likeModel.findOneAndDelete({
             user: userId,
             post: postId
         });
 
-        // Update a Like Count in PostModel based on actual count
+        // Calculate updated like count and synchronize post document
         const totalLikes = await likeModel.countDocuments({ post: postId });
-        await postModel.findByIdAndUpdate(
-            postId,
-            {
-                likesCount: totalLikes
-            }
-        );
+        await postModel.findByIdAndUpdate(postId, {
+            likesCount: totalLikes
+        });
 
-        res.status(200).json({
+        // Return response confirming post was unliked
+        return res.status(200).json({
             message: "Dis Like successfully",
             like,
             likesCount: totalLikes,
@@ -170,132 +166,121 @@ async function unlikePost(req, res) {
             isLiked: false
         });
 
-
     } catch (error) {
-
         console.error(error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Internal server error",
             error: error.message
         });
     }
-
 }
 
+// Fetch all users who liked a post
 async function getPostLikes(req, res) {
-
     try {
-
-        // Get Post ID
+        // Extract post ID from request parameters
         const postId = req.params.postid;
 
-        // Validate Post ID
+        // Validate post ID format
         if (!mongoose.isValidObjectId(postId)) {
             return res.status(400).json({
                 message: "Invalid post ID"
             });
         }
 
-        // Check if post exists
+        // Check if target post exists in database
         const post = await postModel.findById(postId);
-
         if (!post) {
             return res.status(404).json({
                 message: "Post not found"
             });
         }
 
-        // Get likes
+        // Fetch like records and populate user information
         const likes = await likeModel
-            .find({
-                post: postId
-            })
-            .populate("user", "username profilePicture");
+            .find({ post: postId })
+            .populate("user", "_id username name profilePicture");
 
-        // Get Total LIkes
-        const totalLikes = await likeModel.countDocuments({
-            post: postId
-        });
+        // Count total likes for the post
+        const totalLikes = await likeModel.countDocuments({ post: postId });
 
-        res.status(200).json({
+        // Return list of likes and total count
+        return res.status(200).json({
             message: "Post Like fetched successfully",
             totalLikes,
             likes
         });
 
-
     } catch (error) {
-
         console.error(error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Internal server error",
             error: error.message
         });
     }
 }
 
+// Check if authenticated user liked a specific post
 async function userIsLiked(req, res) {
-
     try {
-
+        // Extract post ID from request parameters
         const postId = req.params.postid;
 
+        // Validate post ID format
         if (!mongoose.isValidObjectId(postId)) {
             return res.status(400).json({
                 message: "Invalid post ID"
             });
         }
 
+        // Get authenticated user ID from request
         const userId = req.user._id;
 
+        // Validate user ID format
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({
                 message: "Invalid User ID"
             });
         }
 
-        // Check if post exists
+        // Check if target post exists in database
         const post = await postModel.findById(postId);
-
         if (!post) {
             return res.status(404).json({
                 message: "Post not found"
             });
         }
 
-        // Check if user already liked the post
+        // Query database to check if user has liked this post
         const isLiked = await likeModel.findOne({
             user: userId,
             post: postId
         });
 
-        // Always calculate actual like count to keep it accurate and self-healing
+        // Calculate accurate like count and self-heal post document if mismatched
         const totalLikes = await likeModel.countDocuments({ post: postId });
         if (post.likesCount !== totalLikes) {
             await postModel.findByIdAndUpdate(postId, { likesCount: totalLikes });
         }
 
-        res.status(200).json({
+        // Return user like status along with total count
+        return res.status(200).json({
             message: "Like status fetched successfully",
             isLiked: !!isLiked,
             totalLikes,
             likesCount: totalLikes
         });
 
-
     } catch (error) {
-
         console.error(error);
-        
-        res.status(500).json({
+
+        return res.status(500).json({
             message: "Internal server error",
             error: error.message
         });
     }
-
 }
 
-module.exports = { likePost, unlikePost, getPostLikes, userIsLiked }
-
+module.exports = { likePost, unlikePost, getPostLikes, userIsLiked };

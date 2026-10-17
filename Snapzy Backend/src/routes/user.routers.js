@@ -1,43 +1,42 @@
 const express = require("express");
 
-// MiddleWare
+// Middleware
 const userAuth = require("../middleware/auth.middleware");
 const upload = require("../middleware/upload.middleware");
 
 // Controllers
-const userControllers = require("../controllers/user.controllers")
-
+const userControllers = require("../controllers/user.controllers");
 
 const userrouter = express.Router();
 
-
-// Find User and User Post
+// Current authenticated user profile and content endpoints
 userrouter.get("/me", userAuth, userControllers.getUser);
-userrouter.get("/:userid", userAuth, userControllers.getUserById);
-
-// Find User Post
 userrouter.get("/me/posts", userAuth, userControllers.getUserPost);
+userrouter.get("/me/liked-post", userAuth, userControllers.getLikedPost);
+userrouter.get("/me/saved-posts", userAuth, userControllers.getSavedPost);
+userrouter.get("/me/activities", userAuth, userControllers.getUserActivities);
+userrouter.get("/me/followers", userAuth, userControllers.getFollowers);
+userrouter.get("/me/following", userAuth, userControllers.getFollowing);
+userrouter.get("/me/account-info", userAuth, userControllers.getAccountInfo);
+userrouter.get("/me/settings", userAuth, userControllers.getUserSettings);
+userrouter.patch("/me/settings", userAuth, userControllers.updateUserSettings);
+
+// Random suggested users endpoints
+userrouter.get("/suggested", userAuth, userControllers.getSuggestedUsers);
+userrouter.get("/suggestions", userAuth, userControllers.getSuggestedUsers);
+
+// Target user profile and posts by user ID
+userrouter.get("/:userid", userAuth, userControllers.getUserById);
 userrouter.get("/:userid/posts", userAuth, userControllers.getUserPostsById);
 
-// Profile 
+// Profile text updates
 userrouter.patch("/me/update-profile", userAuth, userControllers.updateProfile);
 
-// Profile Picture
+// Profile picture upload and deletion endpoints
 userrouter.patch("/me/update-profile-picture", userAuth, upload.single("image"), userControllers.updateProfilePicture);
 userrouter.delete("/me/delete-profile-picture", userAuth, userControllers.deleteProfilePicture);
 
-// Delete User 
+// Permanent user account deletion endpoint
 userrouter.delete("/me/delete-user", userAuth, userControllers.deleteUser);
-
-// Liked Posts
-userrouter.get("/me/liked-post", userAuth, userControllers.getLikedPost);
-
-// Get all Saved Post
-userrouter.get("/me/saved-posts", userAuth, userControllers.getSavedPost);
-
-// Get Followers
-userrouter.get("/me/followers", userAuth, userControllers.getFollowers);
-// Get Following
-userrouter.get("/me/following", userAuth, userControllers.getFollowing);
 
 module.exports = userrouter;

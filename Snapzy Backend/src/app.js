@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const cookieParser = require("cookie-parser")
+const cookieParser = require("cookie-parser");
 
-// Routers 
+// API Route Handlers
 const authRouter = require("./routes/auth.routers");
 const postrouter = require("./routes/post.routers");
 const userrouter = require("./routes/user.routers");
@@ -14,6 +14,7 @@ const notificationrouter = require("./routes/notifications.routers");
 
 const app = express();
 
+// Allowed origins for Cross-Origin Resource Sharing (CORS)
 const allowedOrigins = [
 	process.env.FRONTEND_URL,
 	"http://localhost:5173",
@@ -22,6 +23,7 @@ const allowedOrigins = [
 	"http://127.0.0.1:5174",
 ].filter(Boolean);
 
+// Configure CORS middleware with credential support
 app.use(cors({
 	origin: (origin, callback) => {
 		if (!origin || allowedOrigins.includes(origin)) {
@@ -33,9 +35,13 @@ app.use(cors({
 	credentials: true,
 }));
 
+// Parse cookies from incoming requests
 app.use(cookieParser());
+
+// Parse JSON request payloads
 app.use(express.json());
 
+// Mount API endpoint routers
 app.use("/api/auth", authRouter);
 app.use("/api/posts", postrouter);
 app.use("/api/users", userrouter);
@@ -44,6 +50,5 @@ app.use("/api/follows", followrouter);
 app.use("/api/comments", commentrouter);
 app.use("/search", searchrouter);
 app.use("/api/noti", notificationrouter);
-
 
 module.exports = app;
