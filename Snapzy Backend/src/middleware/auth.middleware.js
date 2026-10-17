@@ -4,8 +4,14 @@ const userModel = require("../models/user.model");
 // Verify authentication token from cookies and attach user to request
 const authMiddleware = async (req, res, next) => {
     try {
-        // Extract authentication token from cookies
-        const token = req.cookies.token;
+        // Extract authentication token from Authorization header (Bearer token) or cookies
+        let token = null;
+
+        if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+            token = req.headers.authorization.split(" ")[1];
+        } else if (req.cookies && req.cookies.token) {
+            token = req.cookies.token;
+        }
 
         // Return 401 if authentication token is missing
         if (!token) {

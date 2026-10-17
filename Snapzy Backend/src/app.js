@@ -18,13 +18,49 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Allowed origins for Cross-Origin Resource Sharing (CORS)
-const frontendUrl = process.env.FRONTEND_URL?.trim();
+const allowedOrigins = [
+	"https://snapzy-delta.vercel.app",
+	"http://localhost:5173",
+	"http://localhost:3000",
+	"http://localhost:5174",
+];
 
-// Configure CORS middleware with credential support
+if (process.env.FRONTEND_URL) {
+	const configured = process.env.FRONTEND_URL.trim().replace(/\/$/, "");
+	if (!allowedOrigins.includes(configured)) {
+		allowedOrigins.push(configured);
+	}
+}
+
+// Configure CORS middleware with credential and Authorization header support
 app.use(
 	cors({
-		origin: frontendUrl,
+		origin: function (origin, callback) {
+			if (!origin) return callback(null, true);
+
+			const cleanOrigin = origin.replace(/\/$/, "");
+			try {
+				const url = new URL(cleanOrigin);
+				if (
+					allowedOrigins.includes(cleanOrigin) ||
+					url.hostname.endsWith(".vercel.app") ||
+					cleanOrigin.startsWith("http://localhost:") ||
+					cleanOrigin.startsWith("http://127.0.0.1:")
+				) {
+					return callback(null, true);
+				}
+			} catch (e) {
+				if (allowedOrigins.includes(cleanOrigin)) {
+					return callback(null, true);
+				}
+			}
+
+			return callback(null, false);
+		},
 		credentials: true,
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
+		exposedHeaders: ["Set-Cookie"],
 	})
 );
 

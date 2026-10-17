@@ -450,10 +450,18 @@ async function deleteUser(req, res) {
         await userModel.findOneAndDelete({ _id: userId });
 
         // Clear session token cookie
+        const isHttps = Boolean(
+            process.env.NODE_ENV === "production" ||
+            req.secure ||
+            req.headers["x-forwarded-proto"] === "https"
+        );
+
         res.clearCookie("token", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+            secure: isHttps,
+            sameSite: isHttps ? "none" : "lax",
+            partitioned: isHttps,
+            path: "/",
         });
 
         // Return account deletion confirmation

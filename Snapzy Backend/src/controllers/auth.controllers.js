@@ -4,6 +4,26 @@ const mongoose = require("mongoose");
 
 const userModel = require("../models/user.model");
 
+function isSecureConnection(req) {
+    return Boolean(
+        process.env.NODE_ENV === "production" ||
+        req.secure ||
+        req.headers["x-forwarded-proto"] === "https"
+    );
+}
+
+function getCookieConfig(req) {
+    const isHttps = isSecureConnection(req);
+    return {
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: isHttps ? "none" : "lax",
+        partitioned: isHttps,
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+}
+
 // Register a new user account
 async function registerUser(req, res) {
     try {
@@ -41,16 +61,12 @@ async function registerUser(req, res) {
         );
 
         // Store JWT authentication token in secure HTTP-only cookie
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            path: "/",
-        });
+        res.cookie("token", token, getCookieConfig(req));
 
-        // Return created user profile details in response
+        // Return created user profile details and auth token in response
         return res.status(201).json({
             message: "User register successfully",
+            token,
             user: {
                 id: user._id,
                 _id: user._id,
@@ -127,16 +143,12 @@ async function loginUser(req, res) {
         );
 
         // Store JWT authentication token in secure HTTP-only cookie
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            path: "/",
-        });
+        res.cookie("token", token, getCookieConfig(req));
 
-        // Return authenticated user profile details in response
+        // Return authenticated user profile details and token in response
         return res.status(200).json({
             message: "User Login successfully",
+            token,
             user: {
                 id: user._id,
                 _id: user._id,
@@ -161,11 +173,15 @@ async function loginUser(req, res) {
 // Log out user and clear cookie session
 async function logout(req, res) {
     try {
+        const isHttps = isSecureConnection(req);
+
         // Clear authentication token cookie
         res.clearCookie("token", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: isHttps,
+            sameSite: isHttps ? "none" : "lax",
+            partitioned: isHttps,
+            path: "/",
         });
 
         // Send confirmation response for successful logout
