@@ -20,32 +20,10 @@ app.set("trust proxy", 1);
 // Allowed origins for Cross-Origin Resource Sharing (CORS)
 const frontendUrl = process.env.FRONTEND_URL?.trim();
 
-const allowedOrigins = [
-	"http://localhost:5173",
-	"https://snapzy-green.vercel.app",
-	frontendUrl,
-]
-	.filter(Boolean)
-	.map((url) => url.replace(/\/$/, ""));
-
 // Configure CORS middleware with credential support
 app.use(
 	cors({
-		origin: (origin, callback) => {
-			if (!origin) {
-				return callback(null, true);
-			}
-
-			const normalizedOrigin = origin.replace(/\/$/, "");
-
-			if (allowedOrigins.includes(normalizedOrigin)) {
-				return callback(null, true);
-			}
-
-			return callback(
-				new Error(`Not allowed by CORS: ${origin}`)
-			);
-		},
+		origin: frontendUrl,
 		credentials: true,
 	})
 );
