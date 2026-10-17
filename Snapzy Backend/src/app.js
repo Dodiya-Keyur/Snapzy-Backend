@@ -19,8 +19,10 @@ app.set("trust proxy", 1);
 
 // Allowed origins for Cross-Origin Resource Sharing (CORS)
 const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.trim() : null;
+
 const allowedOrigins = [
 	frontendUrl,
+	"https://snapzy-green.vercel.app",
 ].filter(Boolean);
 
 // Configure CORS middleware with credential support
