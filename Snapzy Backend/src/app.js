@@ -14,22 +14,25 @@ const notificationrouter = require("./routes/notifications.routers");
 
 const app = express();
 
+// Trust reverse proxy (necessary on Render and cloud platforms for secure cookies)
+app.set("trust proxy", 1);
+
 // Allowed origins for Cross-Origin Resource Sharing (CORS)
+const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.trim() : null;
 const allowedOrigins = [
-	process.env.FRONTEND_URL,
-	"http://localhost:5173",
-	"http://127.0.0.1:5173",
-	"http://localhost:5174",
-	"http://127.0.0.1:5174",
+	frontendUrl,
 ].filter(Boolean);
 
 // Configure CORS middleware with credential support
 app.use(cors({
 	origin: (origin, callback) => {
-		if (!origin || allowedOrigins.includes(origin)) {
+		if (!origin) return callback(null, true);
+		const normalizedOrigin = origin.replace(/\/$/, "");
+		const isAllowed = allowedOrigins.some((allowed) => allowed.replace(/\/$/, "") === normalizedOrigin);
+		if (isAllowed) {
 			callback(null, true);
 		} else {
-			callback(new Error("Not allowed by CORS"));
+			callback(new Error(`Not allowed by CORS: ${origin}`));
 		}
 	},
 	credentials: true,
@@ -41,6 +44,15 @@ app.use(cookieParser());
 // Parse JSON request payloads
 app.use(express.json());
 
+// Base health check endpoints for Render uptime monitoring
+app.get("/", (req, res) => {
+	res.status(200).json({ status: "ok", message: "Snapzy Backend API is running" });
+});
+
+app.get("/health", (req, res) => {
+	res.status(200).json({ status: "healthy" });
+});
+
 // Mount API endpoint routers
 app.use("/api/auth", authRouter);
 app.use("/api/posts", postrouter);
@@ -49,6 +61,7 @@ app.use("/api/posts", likerouter);
 app.use("/api/follows", followrouter);
 app.use("/api/comments", commentrouter);
 app.use("/search", searchrouter);
+app.use("/api/search", searchrouter);
 app.use("/api/noti", notificationrouter);
 
 module.exports = app;
